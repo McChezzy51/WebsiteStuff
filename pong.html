@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pong</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: #0d0f12;
+            color: #e6e8eb;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+        }
+        .wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+            gap: 12px;
+            user-select: none;
+        }
+        canvas {
+            background: linear-gradient(180deg, #0f1216 0%, #0b0d10 100%);
+            border: 1px solid #1a1f24;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.02);
+        }
+        .hud {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .btn {
+            appearance: none;
+            border: 0;
+            background: #1a2836;
+            color: #dce6f0;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.35);
+            transition: transform 0.08s ease, background 0.2s ease;
+        }
+        .btn:hover { background: #203142; }
+        .btn:active { transform: translateY(1px); }
+        .note { opacity: 0.8; font-size: 14px; }
+    </style>
+    <link rel="icon" href="data:," />
+    <meta name="description" content="Classic Pong game in a single HTML file" />
+</head>
+<body>
+    <div class="wrap">
+        <canvas id="game" width="900" height="600" aria-label="Pong game canvas"></canvas>
+        <div class="hud">
+            <button id="start" class="btn">Start / Pause (Space)</button>
+            <button id="reset" class="btn">Reset (R)</button>
+            <span class="note">Controls: W/S or ↑/↓ to move. First to 7 wins.</span>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        "use strict";
+
+        /**
+         * Single-file Pong implementation with:
+         * - Player vs simple AI
+         * - Start/Pause/Reset
+         * - Score to 7
+         * - Pixel-perfect collisions and wall bounces
+         * - DevicePixelRatio-aware crisp rendering
+         */
+
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        // Backing store for HiDPI rendering
+        const devicePixelRatioSafe = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+        const logicalWidth = canvas.width;
+        const logicalHeight = canvas.height;
+        canvas.width = logicalWidth * devicePixelRatioSafe;
+        canvas.height = logicalHeight * devicePixelRatioSafe;
+        canvas.style.width = logicalWidth + "px";
+        canvas.style.height = logicalHeight + "px";
+        ctx.scale(devicePixelRatioSafe, devicePixelRatioSafe);
+
+        // Game constants
+        const PADDLE_WIDTH = 12;
+        const PADDLE_HEIGHT = 96;
+        const BALL_SIZE = 12;
+        const PADDLE_SPEED = 520; // px/s
+        const BALL_SPEED_START = 420; // px/s
+        const BALL_SPEED_MAX = 980;
+        const BALL_ACCEL_ON_HIT = 1.06; // speed multiplier per paddle hit
+        const AI_REACTION = 0.12; // 0..1 fraction towards target per frame
+        const WIN_SCORE = 7;
+
+        // Game state
+        const state = {
+            running: false,
+            lastTime: 0,
+            player: { x: 24, y: (logicalHeight - PADDLE_HEIGHT) / 2, score: 0 },
+            ai: { x: logicalWidth - 24 - PADDLE_WIDTH, y: (logicalHeight - PADDLE_HEIGHT) / 2, score: 0 },
+            ball: { x: logicalWidth/2 - BALL_SIZE/2, y: logicalHeight/2 - BALL_SIZE/2, vx: 0, vy: 0, speed: BALL_SPEED_START },
+            keys: { up: false, down: false },
+            justScored: false,
+            winner: null,
+        };
+
+        function resetBall(servingToLeft) {
+            state.ball.x = logicalWidth/2 - BALL_SIZE/2;
+            state.ball.y = logicalHeight/2 - BALL_SIZE/2;
+            const angle = (Math.random() * 0.6 - 0.3) * Math.PI; // slight vertical variance
+            const dir = servingToLeft ? -1 : 1;
+            state.ball.speed = BALL_SPEED_START;
+            state.ball.vx = Math.cos(angle) * state.ball.speed * dir;
+            state.ball.vy = Math.sin(angle) * state.ball.speed;
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function aabbIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+            return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+        }
+
+        function startPause() {
+            if (state.winner) return; // lock after win
+            state.running = !state.running;
+            state.lastTime = performance.now();
+            requestAnimationFrame(loop);
+        }
+
+        function resetGame() {
+            state.player.y = (logicalHeight - PADDLE_HEIGHT) / 2;
+            state.ai.y = (logicalHeight - PADDLE_HEIGHT) / 2;
+            state.player.score = 0;
+            state.ai.score = 0;
+            state.winner = null;
+            resetBall(Math.random() < 0.5);
+            state.running = false;
+            draw(0);
+        }
+
+        function handleInput(dt) {
+            if (state.keys.up && !state.keys.down) {
+                state.player.y -= PADDLE_SPEED * dt;
+            } else if (state.keys.down && !state.keys.up) {
+                state.player.y += PADDLE_SPEED * dt;
+            }
+            state.player.y = clamp(state.player.y, 0, logicalHeight - PADDLE_HEIGHT);
+        }
+
+        function updateAI(dt) {
+            const target = state.ball.y + BALL_SIZE/2 - PADDLE_HEIGHT/2;
+            const error = target - state.ai.y;
+            state.ai.y += error * AI_REACTION;
+            // Add maximum speed cap relative to ball speed to avoid impossible AI
+            const aiMaxSpeed = Math.max(260, state.ball.speed * 0.65);
+            const dy = clamp(state.ai.y - clamp(state.ai.y - error * AI_REACTION, 0, logicalHeight - PADDLE_HEIGHT), -aiMaxSpeed * dt, aiMaxSpeed * dt);
+            state.ai.y = clamp(state.ai.y, 0, logicalHeight - PADDLE_HEIGHT);
+        }
+
+        function updateBall(dt) {
+            let { x, y, vx, vy, speed } = state.ball;
+            x += vx * dt;
+            y += vy * dt;
+
+            // Wall collisions (top/bottom)
+            if (y <= 0) {
+                y = 0; vy = Math.abs(vy);
+            } else if (y + BALL_SIZE >= logicalHeight) {
+                y = logicalHeight - BALL_SIZE; vy = -Math.abs(vy);
+            }
+
+            // Paddle collisions
+            const playerRect = { x: state.player.x, y: state.player.y, w: PADDLE_WIDTH, h: PADDLE_HEIGHT };
+            const aiRect = { x: state.ai.x, y: state.ai.y, w: PADDLE_WIDTH, h: PADDLE_HEIGHT };
+
+            // Player paddle
+            if (vx < 0 && aabbIntersect(x, y, BALL_SIZE, BALL_SIZE, playerRect.x, playerRect.y, playerRect.w, playerRect.h)) {
+                x = playerRect.x + playerRect.w; // place outside paddle
+                const hitPos = (y + BALL_SIZE/2) - (playerRect.y + playerRect.h/2);
+                const norm = clamp(hitPos / (playerRect.h/2), -1, 1);
+                const angle = norm * (Math.PI / 4); // max 45deg
+                speed = Math.min(BALL_SPEED_MAX, speed * BALL_ACCEL_ON_HIT);
+                vx = Math.cos(angle) * speed;
+                vy = Math.sin(angle) * speed;
+            }
+
+            // AI paddle
+            if (vx > 0 && aabbIntersect(x, y, BALL_SIZE, BALL_SIZE, aiRect.x, aiRect.y, aiRect.w, aiRect.h)) {
+                x = aiRect.x - BALL_SIZE;
+                const hitPos = (y + BALL_SIZE/2) - (aiRect.y + aiRect.h/2);
+                const norm = clamp(hitPos / (aiRect.h/2), -1, 1);
+                const angle = norm * (Math.PI / 4);
+                speed = Math.min(BALL_SPEED_MAX, speed * BALL_ACCEL_ON_HIT);
+                vx = -Math.cos(angle) * speed;
+                vy = Math.sin(angle) * speed;
+            }
+
+            // Scoring
+            if (x + BALL_SIZE < 0) {
+                state.ai.score += 1; state.justScored = true;
+                if (state.ai.score >= WIN_SCORE) {
+                    state.winner = "AI";
+                    state.running = false;
+                }
+                resetBall(false);
+                return; // skip applying post-score position
+            } else if (x > logicalWidth) {
+                state.player.score += 1; state.justScored = true;
+                if (state.player.score >= WIN_SCORE) {
+                    state.winner = "Player";
+                    state.running = false;
+                }
+                resetBall(true);
+                return;
+            }
+
+            state.ball.x = x;
+            state.ball.y = y;
+            state.ball.vx = vx;
+            state.ball.vy = vy;
+            state.ball.speed = Math.hypot(vx, vy);
+        }
+
+        function drawNet() {
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            ctx.fillStyle = "#223142";
+            const segment = 14, gap = 12, width = 4;
+            for (let y = 0; y < logicalHeight; y += segment + gap) {
+                ctx.fillRect((logicalWidth - width) / 2, y, width, segment);
+            }
+            ctx.restore();
+        }
+
+        function drawPaddle(x, y) {
+            const r = 8;
+            ctx.fillStyle = "#9fc4ff";
+            roundRect(ctx, x, y, PADDLE_WIDTH, PADDLE_HEIGHT, r);
+            ctx.fill();
+        }
+
+        function drawBall(x, y) {
+            ctx.fillStyle = "#ffe08a";
+            ctx.beginPath();
+            ctx.roundRect(x, y, BALL_SIZE, BALL_SIZE, 3);
+            ctx.fill();
+        }
+
+        function drawScore() {
+            ctx.font = "bold 48px ui-sans-serif, system-ui, -apple-system, Segoe UI";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillStyle = "#e8edf5";
+            ctx.fillText(String(state.player.score), logicalWidth/2 - 60, 20);
+            ctx.fillText(String(state.ai.score), logicalWidth/2 + 60, 20);
+        }
+
+        function drawWin() {
+            if (!state.winner) return;
+            ctx.save();
+            ctx.fillStyle = "rgba(0,0,0,0.55)";
+            ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+            ctx.fillStyle = "#e6f2ff";
+            ctx.font = "600 40px ui-sans-serif, system-ui, -apple-system, Segoe UI";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`${state.winner} Wins!`, logicalWidth/2, logicalHeight/2 - 10);
+            ctx.font = "400 18px ui-sans-serif, system-ui, -apple-system, Segoe UI";
+            ctx.fillStyle = "#b7c9dd";
+            ctx.fillText("Press R to reset", logicalWidth/2, logicalHeight/2 + 28);
+            ctx.restore();
+        }
+
+        function clear() {
+            const g = ctx.createLinearGradient(0, 0, 0, logicalHeight);
+            g.addColorStop(0, "#0f1216");
+            g.addColorStop(1, "#0b0d10");
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+        }
+
+        function draw(dt) {
+            clear();
+            drawNet();
+            drawPaddle(state.player.x, state.player.y);
+            drawPaddle(state.ai.x, state.ai.y);
+            drawBall(state.ball.x, state.ball.y);
+            drawScore();
+            drawWin();
+        }
+
+        function loop(t) {
+            const now = t || performance.now();
+            const dt = Math.min(0.033, (now - state.lastTime) / 1000) || 0; // clamp to avoid huge jumps
+            state.lastTime = now;
+            if (!state.running) { draw(0); return; }
+            handleInput(dt);
+            updateAI(dt);
+            updateBall(dt);
+            draw(dt);
+            requestAnimationFrame(loop);
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            const radius = Math.min(r, w/2, h/2) || 0;
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.arcTo(x + w, y, x + w, y + h, radius);
+            ctx.arcTo(x + w, y + h, x, y + h, radius);
+            ctx.arcTo(x, y + h, x, y, radius);
+            ctx.arcTo(x, y, x + w, y, radius);
+            ctx.closePath();
+        }
+
+        // Input bindings
+        const startBtn = document.getElementById("start");
+        const resetBtn = document.getElementById("reset");
+        startBtn.addEventListener("click", startPause);
+        resetBtn.addEventListener("click", resetGame);
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "ArrowUp" || e.code === "KeyW") state.keys.up = true;
+            if (e.code === "ArrowDown" || e.code === "KeyS") state.keys.down = true;
+            if (e.code === "Space") startPause();
+            if (e.code === "KeyR") resetGame();
+        });
+        window.addEventListener("keyup", (e) => {
+            if (e.code === "ArrowUp" || e.code === "KeyW") state.keys.up = false;
+            if (e.code === "ArrowDown" || e.code === "KeyS") state.keys.down = false;
+        });
+
+        // Initialize
+        resetGame();
+        // draw initial frame
+        draw(0);
+    })();
+    </script>
+</body>
+</html>
+
+

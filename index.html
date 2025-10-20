@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The History of Wheels - Interactive Journey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+            color: white;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: slideInUp 1s ease-out 0.6s both;
+        }
+
+        .timeline {
+            position: relative;
+            margin: 40px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            transform: translateX(-50%);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin: 40px 0;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.6s ease;
+        }
+
+        .timeline-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content {
+            margin-left: 0;
+            margin-right: 60%;
+            text-align: right;
+        }
+
+        .timeline-item:nth-child(even) .timeline-content {
+            margin-left: 60%;
+            margin-right: 0;
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-content:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            width: 0;
+            height: 0;
+            border: 15px solid transparent;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content::before {
+            right: -30px;
+            border-left-color: #f8f9fa;
+        }
+
+        .timeline-item:nth-child(even) .timeline-content::before {
+            left: -30px;
+            border-right-color: #f8f9fa;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            border: 4px solid white;
+            box-shadow: 0 0 0 4px #667eea;
+            z-index: 2;
+        }
+
+        .year {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .wheel-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .wheel-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .wheel-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .wheel-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+
+        .wheel-card:hover .wheel-icon {
+            transform: rotate(360deg);
+        }
+
+        .quiz-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0;
+        }
+
+        .quiz-question {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quiz-option {
+            padding: 15px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-option:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .quiz-option.correct {
+            background: #28a745;
+            color: white;
+        }
+
+        .quiz-option.incorrect {
+            background: #dc3545;
+            color: white;
+        }
+
+        .quiz-result {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .interactive-wheel {
+            width: 200px;
+            height: 200px;
+            border: 8px solid #333;
+            border-radius: 50%;
+            margin: 20px auto;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.5s ease;
+        }
+
+        .interactive-wheel:hover {
+            transform: rotate(180deg);
+        }
+
+        .wheel-spoke {
+            position: absolute;
+            width: 3px;
+            height: 184px;
+            background: #333;
+            top: 50%;
+            left: 50%;
+            transform-origin: 50% 50%;
+        }
+
+        .wheel-spoke:nth-child(1) { transform: translate(-50%, -50%) rotate(0deg); }
+        .wheel-spoke:nth-child(2) { transform: translate(-50%, -50%) rotate(30deg); }
+        .wheel-spoke:nth-child(3) { transform: translate(-50%, -50%) rotate(60deg); }
+        .wheel-spoke:nth-child(4) { transform: translate(-50%, -50%) rotate(90deg); }
+        .wheel-spoke:nth-child(5) { transform: translate(-50%, -50%) rotate(120deg); }
+        .wheel-spoke:nth-child(6) { transform: translate(-50%, -50%) rotate(150deg); }
+        .wheel-spoke:nth-child(7) { transform: translate(-50%, -50%) rotate(180deg); }
+        .wheel-spoke:nth-child(8) { transform: translate(-50%, -50%) rotate(210deg); }
+        .wheel-spoke:nth-child(9) { transform: translate(-50%, -50%) rotate(240deg); }
+        .wheel-spoke:nth-child(10) { transform: translate(-50%, -50%) rotate(270deg); }
+        .wheel-spoke:nth-child(11) { transform: translate(-50%, -50%) rotate(300deg); }
+        .wheel-spoke:nth-child(12) { transform: translate(-50%, -50%) rotate(330deg); }
+
+        .wheel-hub {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 20px;
+            }
+
+            .timeline-item:nth-child(odd) .timeline-content,
+            .timeline-item:nth-child(even) .timeline-content {
+                margin-left: 50px;
+                margin-right: 0;
+                text-align: left;
+            }
+
+            .timeline-item:nth-child(odd) .timeline-content::before,
+            .timeline-item:nth-child(even) .timeline-content::before {
+                left: -30px;
+                right: auto;
+                border-right-color: #f8f9fa;
+                border-left-color: transparent;
+            }
+
+            .timeline-dot {
+                left: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛞 The History of Wheels</h1>
+            <p class="subtitle">An Interactive Journey Through Time</p>
+        </header>
+
+        <div class="main-content">
+            <section class="intro">
+                <h2>Welcome to the Wheel's Journey</h2>
+                <p>The wheel is one of humanity's most important inventions, revolutionizing transportation, industry, and daily life. Join us on an interactive exploration of how this simple yet profound invention changed the world.</p>
+                
+                <div class="interactive-wheel" onclick="spinWheel()">
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-hub"></div>
+                </div>
+                <p style="text-align: center; margin-top: 10px; font-style: italic;">Click the wheel above to see it spin!</p>
+            </section>
+
+            <section class="timeline-section">
+                <h2>Timeline of Wheel Evolution</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" onclick="showDetails('ancient')">
+                            <div class="year">3500 BCE</div>
+                            <h3>First Wheels</h3>
+                            <p>The earliest known wheels were made of solid wood and used for pottery making in Mesopotamia.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" onclick="showDetails('chariot')">
+                            <div class="year">2000 BCE</div>
+                            <h3>Chariot Wheels</h3>
+                            <p>Spoked wheels were developed for chariots, making them lighter and faster for warfare and transportation.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" onclick="showDetails('iron')">
+                            <div class="year">1000 BCE</div>
+                            <h3>Iron Rims</h3>
+                            <p>Iron rims were added to wooden wheels, making them more durable and suitable for heavy loads.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" onclick="showDetails('industrial')">
+                            <div class="year">1800s</div>
+                            <h3>Industrial Revolution</h3>
+                            <p>Steam engines and railways revolutionized transportation, with iron and steel wheels becoming standard.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" onclick="showDetails('modern')">
+                            <div class="year">1888</div>
+                            <h3>Pneumatic Tires</h3>
+                            <p>John Dunlop invented the pneumatic tire, making vehicles more comfortable and efficient.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" onclick="showDetails('future')">
+                            <div class="year">Today & Future</div>
+                            <h3>Modern Innovation</h3>
+                            <p>From carbon fiber wheels to smart tires with sensors, wheels continue to evolve with technology.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gallery-section">
+                <h2>Types of Wheels Through History</h2>
+                <div class="wheel-gallery">
+                    <div class="wheel-card" onclick="rotateCard(this)">
+                        <div class="wheel-icon">🛞</div>
+                        <h3>Solid Wood Wheel</h3>
+                        <p>3500 BCE - The first wheels were solid wooden discs used for pottery.</p>
+                    </div>
+                    <div class="wheel-card" onclick="rotateCard(this)">
+                        <div class="wheel-icon">⚡</div>
+                        <h3>Spoked Wheel</h3>
+                        <p>2000 BCE - Lighter and faster wheels with spokes for chariots.</p>
+                    </div>
+                    <div class="wheel-card" onclick="rotateCard(this)">
+                        <div class="wheel-icon">🔩</div>
+                        <h3>Iron-Rimmed Wheel</h3>
+                        <p>1000 BCE - Durable wheels with iron rims for heavy loads.</p>
+                    </div>
+                    <div class="wheel-card" onclick="rotateCard(this)">
+                        <div class="wheel-icon">🚂</div>
+                        <h3>Railway Wheel</h3>
+                        <p>1800s - Steel wheels designed for railway tracks.</p>
+                    </div>
+                    <div class="wheel-card" onclick="rotateCard(this)">
+                        <div class="wheel-icon">🚗</div>
+                        <h3>Pneumatic Tire</h3>
+                        <p>1888 - Air-filled tires for comfort and efficiency.</p>
+                    </div>
+                    <div class="wheel-card" onclick="rotateCard(this)">
+                        <div class="wheel-icon">🔮</div>
+                        <h3>Smart Wheel</h3>
+                        <p>Today - Wheels with sensors and smart technology.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="quiz-section">
+                <h2>Test Your Wheel Knowledge!</h2>
+                <div class="quiz-question">
+                    <h3>Question 1: What was the primary use of the first wheels?</h3>
+                    <div class="quiz-options">
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">Transportation</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, true)">Pottery Making</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">Warfare</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">Agriculture</button>
+                    </div>
+                </div>
+
+                <div class="quiz-question">
+                    <h3>Question 2: When were spoked wheels first developed?</h3>
+                    <div class="quiz-options">
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">5000 BCE</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, true)">2000 BCE</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">1000 BCE</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">500 BCE</button>
+                    </div>
+                </div>
+
+                <div class="quiz-question">
+                    <h3>Question 3: Who invented the pneumatic tire?</h3>
+                    <div class="quiz-options">
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">Henry Ford</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">Karl Benz</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, true)">John Dunlop</button>
+                        <button class="quiz-option" onclick="checkAnswer(this, false)">Gottlieb Daimler</button>
+                    </div>
+                </div>
+
+                <div class="quiz-result" id="quizResult"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let correctAnswers = 0;
+        let totalQuestions = 3;
+
+        // Animate timeline items on scroll
+        function animateTimeline() {
+            const timelineItems = document.querySelectorAll('.timeline-item');
+            const progressFill = document.getElementById('progressFill');
+            
+            timelineItems.forEach((item, index) => {
+                const rect = item.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                
+                if (isVisible) {
+                    item.classList.add('visible');
+                    const progress = ((index + 1) / timelineItems.length) * 100;
+                    progressFill.style.width = progress + '%';
+                }
+            });
+        }
+
+        // Spin wheel animation
+        function spinWheel() {
+            const wheel = document.querySelector('.interactive-wheel');
+            wheel.style.transform = 'rotate(720deg)';
+            setTimeout(() => {
+                wheel.style.transform = 'rotate(0deg)';
+            }, 1000);
+        }
+
+        // Rotate card animation
+        function rotateCard(card) {
+            card.style.transform = 'rotateY(360deg)';
+            setTimeout(() => {
+                card.style.transform = 'rotateY(0deg)';
+            }, 600);
+        }
+
+        // Show details for timeline items
+        function showDetails(era) {
+            const details = {
+                ancient: "The first wheels were solid wooden discs, about 3 feet in diameter, used primarily for pottery making. They were heavy and inefficient for transportation.",
+                chariot: "Spoked wheels reduced weight by 50% compared to solid wheels, making chariots faster and more maneuverable in battle.",
+                iron: "Iron rims protected wooden wheels from wear and made them suitable for carrying heavy loads over long distances.",
+                industrial: "The Industrial Revolution brought steam-powered vehicles and railways, requiring stronger, more precise wheels made of iron and steel.",
+                modern: "Pneumatic tires provided cushioning and better traction, revolutionizing personal transportation and making long-distance travel comfortable.",
+                future: "Modern wheels incorporate materials like carbon fiber, smart sensors for tire pressure monitoring, and even self-inflating capabilities."
+            };
+            
+            alert(details[era]);
+        }
+
+        // Quiz functionality
+        function checkAnswer(button, isCorrect) {
+            const question = button.closest('.quiz-question');
+            const options = question.querySelectorAll('.quiz-option');
+            
+            // Disable all options in this question
+            options.forEach(option => {
+                option.disabled = true;
+                if (option === button) {
+                    if (isCorrect) {
+                        option.classList.add('correct');
+                        correctAnswers++;
+                    } else {
+                        option.classList.add('incorrect');
+                    }
+                } else if (option.onclick.toString().includes('true')) {
+                    option.classList.add('correct');
+                }
+            });
+
+            // Check if all questions are answered
+            const allQuestions = document.querySelectorAll('.quiz-question');
+            const answeredQuestions = document.querySelectorAll('.quiz-question .quiz-option[disabled]');
+            
+            if (answeredQuestions.length === allQuestions.length * 4) {
+                showQuizResult();
+            }
+        }
+
+        function showQuizResult() {
+            const result = document.getElementById('quizResult');
+            const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+            
+            let message = `Quiz Complete! You got ${correctAnswers} out of ${totalQuestions} correct (${percentage}%)`;
+            
+            if (percentage === 100) {
+                message += " 🎉 Perfect! You're a wheel expert!";
+            } else if (percentage >= 70) {
+                message += " 👍 Great job! You know your wheel history!";
+            } else {
+                message += " 📚 Keep learning about the fascinating history of wheels!";
+            }
+            
+            result.textContent = message;
+            result.style.color = percentage >= 70 ? '#28a745' : '#dc3545';
+        }
+
+        // Event listeners
+        window.addEventListener('scroll', animateTimeline);
+        window.addEventListener('load', animateTimeline);
+
+        // Initialize animations
+        document.addEventListener('DOMContentLoaded', function() {
+            animateTimeline();
+        });
+    </script>
+</body>
+</html>
