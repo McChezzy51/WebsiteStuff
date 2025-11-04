@@ -233,6 +233,107 @@
             font-weight: bold;
         }
 
+        .quiz-controls {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .reset-button {
+            padding: 12px 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .reset-button:hover {
+            background: #5a6268;
+        }
+
+        .poll-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0;
+        }
+
+        .poll-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .poll-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #e9ecef;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .poll-option:hover {
+            background: #dde1e4;
+        }
+
+        .poll-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .poll-submit-button {
+            padding: 12px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .poll-submit-button:hover {
+            background: #556cd6;
+        }
+
+        .poll-result {
+            text-align: center;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        .poll-live-results {
+            margin-top: 16px;
+        }
+
+        .poll-result-row {
+            display: grid;
+            grid-template-columns: 160px 1fr 60px;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .poll-result-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .poll-result-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.4s ease;
+        }
+
         .interactive-wheel {
             width: 200px;
             height: 200px;
@@ -394,6 +495,24 @@
                 </div>
                 <p style="text-align: center; margin-top: 10px; font-style: italic;">Click the wheel above to see it spin!</p>
             </section>
+            
+            <section class="poll-section">
+                <h2>Vote: Best Kind of Wheel</h2>
+                <div class="poll-options" id="pollOptions">
+                    <label class="poll-option"><input type="radio" name="wheelPoll" value="solid-wood"> <span>Solid Wood</span></label>
+                    <label class="poll-option"><input type="radio" name="wheelPoll" value="spoked"> <span>Spoked</span></label>
+                    <label class="poll-option"><input type="radio" name="wheelPoll" value="iron-rimmed"> <span>Iron Rimmed</span></label>
+                    <label class="poll-option"><input type="radio" name="wheelPoll" value="industrial-revolution"> <span>Industrial Revolution</span></label>
+                    <label class="poll-option"><input type="radio" name="wheelPoll" value="pneumatic"> <span>Pneumatic</span></label>
+                    <label class="poll-option"><input type="radio" name="wheelPoll" value="modern"> <span>Modern</span></label>
+                </div>
+                <div class="poll-actions">
+                    <button id="submitPollButton" class="poll-submit-button" type="button">Submit Vote</button>
+                    <button id="resetPollButton" class="reset-button hidden" type="button">Change Vote</button>
+                </div>
+                <div id="pollResult" class="poll-result"></div>
+                <div id="pollLiveResults" class="poll-live-results"></div>
+            </section>
 
             <section class="timeline-section">
                 <h2>Timeline of Wheel Evolution</h2>
@@ -527,6 +646,9 @@
                 </div>
 
                 <div class="quiz-result" id="quizResult"></div>
+                <div class="quiz-controls">
+                    <button id="resetQuizButton" class="reset-button hidden" type="button">Reset Quiz</button>
+                </div>
             </section>
         </div>
     </div>
@@ -534,6 +656,188 @@
     <script>
         let correctAnswers = 0;
         let totalQuestions = 3;
+
+        const QUIZ_STORAGE_KEY = 'wheelQuiz';
+
+        function loadQuizState() {
+            try {
+                const raw = localStorage.getItem(QUIZ_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : { selections: {}, completed: false, correctAnswers: 0 };
+            } catch (e) {
+                return { selections: {}, completed: false, correctAnswers: 0 };
+            }
+        }
+
+        function saveQuizState(state) {
+            try {
+                localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                // ignore storage errors
+            }
+        }
+
+        function saveSelection(questionIndex, optionIndex, isCorrect) {
+            const state = loadQuizState();
+            state.selections[questionIndex] = { optionIndex: optionIndex, isCorrect: isCorrect };
+            state.correctAnswers = Object.values(state.selections).filter(s => s && s.isCorrect).length;
+            saveQuizState(state);
+        }
+
+        function showResetButton(show) {
+            const btn = document.getElementById('resetQuizButton');
+            if (!btn) return;
+            if (show) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        function restoreQuizFromState() {
+            const state = loadQuizState();
+            const questions = document.querySelectorAll('.quiz-question');
+            if (!state || !state.selections) return;
+
+            correctAnswers = 0;
+
+            Object.keys(state.selections).forEach(key => {
+                const qIndex = parseInt(key, 10);
+                const selection = state.selections[key];
+                const question = questions[qIndex];
+                if (!question) return;
+                const options = question.querySelectorAll('.quiz-option');
+
+                options.forEach((opt, idx) => {
+                    opt.disabled = true;
+                    opt.classList.remove('correct', 'incorrect');
+                    if (idx === selection.optionIndex) {
+                        if (selection.isCorrect) {
+                            opt.classList.add('correct');
+                            correctAnswers++;
+                        } else {
+                            opt.classList.add('incorrect');
+                        }
+                    } else {
+                        const attr = opt.getAttribute('onclick') || '';
+                        if (attr.includes('(this, true)')) {
+                            opt.classList.add('correct');
+                        }
+                    }
+                });
+            });
+
+            if (state.completed) {
+                showQuizResult();
+                showResetButton(true);
+            }
+        }
+
+        function resetQuiz() {
+            try {
+                localStorage.removeItem(QUIZ_STORAGE_KEY);
+            } catch (e) {
+                // ignore storage errors
+            }
+            correctAnswers = 0;
+            const options = document.querySelectorAll('.quiz-option');
+            options.forEach(opt => {
+                opt.disabled = false;
+                opt.classList.remove('correct', 'incorrect');
+            });
+            const result = document.getElementById('quizResult');
+            if (result) result.textContent = '';
+            showResetButton(false);
+        }
+
+        // Poll functionality
+        const POLL_STORAGE_KEY = 'wheelPoll';
+
+        function loadPollState() {
+            try {
+                const raw = localStorage.getItem(POLL_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : { choice: null };
+            } catch (e) {
+                return { choice: null };
+            }
+        }
+
+        function savePollState(state) {
+            try {
+                localStorage.setItem(POLL_STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                // ignore storage errors
+            }
+        }
+
+        function renderPollFromState() {
+            const state = loadPollState();
+            const inputs = document.querySelectorAll('input[name="wheelPoll"]');
+            const submitBtn = document.getElementById('submitPollButton');
+            const resetBtn = document.getElementById('resetPollButton');
+            const result = document.getElementById('pollResult');
+
+            if (!inputs.length) return;
+
+            if (state.choice) {
+                inputs.forEach(input => {
+                    input.checked = input.value === state.choice;
+                    input.disabled = true;
+                });
+                if (submitBtn) submitBtn.classList.add('hidden');
+                if (resetBtn) resetBtn.classList.remove('hidden');
+
+                const checked = Array.from(inputs).find(i => i.checked);
+                let labelText = '';
+                if (checked) {
+                    const label = checked.closest('label');
+                    const span = label ? label.querySelector('span') : null;
+                    labelText = span ? span.textContent : checked.value;
+                }
+                if (result) {
+                    result.textContent = labelText ? `You voted for: ${labelText}` : '';
+                    result.style.color = '#333';
+                }
+            } else {
+                inputs.forEach(input => {
+                    input.checked = false;
+                    input.disabled = false;
+                });
+                if (submitBtn) submitBtn.classList.remove('hidden');
+                if (resetBtn) resetBtn.classList.add('hidden');
+                if (result) result.textContent = '';
+            }
+        }
+
+        function submitPoll() {
+            const checked = document.querySelector('input[name="wheelPoll"]:checked');
+            const result = document.getElementById('pollResult');
+            if (!checked) {
+                if (result) {
+                    result.textContent = 'Please select an option to vote.';
+                    result.style.color = '#dc3545';
+                }
+                return;
+            }
+            const state = loadPollState();
+            const prevChoice = (state && (state.prevChoice || state.choice)) ? (state.prevChoice || state.choice) : null;
+            // Save new choice and clear prevChoice
+            savePollState({ choice: checked.value, prevChoice: null });
+            renderPollFromState();
+            // Send to Firestore (handled in module script if available)
+            if (window.submitPollToFirestore) {
+                window.submitPollToFirestore(checked.value, prevChoice).catch(() => {
+                    // non-blocking; UI already updated locally
+                });
+            }
+        }
+
+        function resetPoll() {
+            const state = loadPollState();
+            const prev = state && (state.choice || state.prevChoice) ? (state.choice || state.prevChoice) : null;
+            // Keep previous choice so the next submit can decrement it server-side
+            savePollState({ choice: null, prevChoice: prev });
+            renderPollFromState();
+        }
 
         // Animate timeline items on scroll
         function animateTimeline() {
@@ -603,12 +907,24 @@
                 }
             });
 
+            // Persist this selection
+            const questionList = Array.from(document.querySelectorAll('.quiz-question'));
+            const optionList = Array.from(options);
+            const questionIndex = questionList.indexOf(question);
+            const optionIndex = optionList.indexOf(button);
+            saveSelection(questionIndex, optionIndex, isCorrect);
+
             // Check if all questions are answered
             const allQuestions = document.querySelectorAll('.quiz-question');
             const answeredQuestions = document.querySelectorAll('.quiz-question .quiz-option[disabled]');
             
             if (answeredQuestions.length === allQuestions.length * 4) {
                 showQuizResult();
+                const state = loadQuizState();
+                state.completed = true;
+                state.correctAnswers = correctAnswers;
+                saveQuizState(state);
+                showResetButton(true);
             }
         }
 
@@ -637,7 +953,122 @@
         // Initialize animations
         document.addEventListener('DOMContentLoaded', function() {
             animateTimeline();
+            restoreQuizFromState();
+            const resetBtn = document.getElementById('resetQuizButton');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', resetQuiz);
+            }
+            // Poll init
+            renderPollFromState();
+            const submitPollBtn = document.getElementById('submitPollButton');
+            if (submitPollBtn) submitPollBtn.addEventListener('click', submitPoll);
+            const resetPollBtn = document.getElementById('resetPollButton');
+            if (resetPollBtn) resetPollBtn.addEventListener('click', resetPoll);
         });
+    </script>
+    <script type="module">
+        // Firebase App (the core Firebase SDK) and Firestore via ESM CDN
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
+        import { getFirestore, doc, onSnapshot, runTransaction, increment } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyBx0TCaBEG50CI824AeOp9JoLPbST-hz0w",
+          authDomain: "wheelycoolhistory.firebaseapp.com",
+          projectId: "wheelycoolhistory",
+          storageBucket: "wheelycoolhistory.firebasestorage.app",
+          messagingSenderId: "344580402217",
+          appId: "1:344580402217:web:43b668224a2612b02d4038"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const docRef = doc(db, 'polls', 'best_wheels');
+
+        const CHOICE_TO_FIELD = {
+            'solid-wood': 'solid_wood',
+            'spoked': 'spoked',
+            'iron-rimmed': 'iron_rim',
+            'industrial-revolution': 'industrial_rev',
+            'pneumatic': 'pneumatic',
+            'modern': 'modern'
+        };
+
+        const FIELD_LABELS = {
+            solid_wood: 'Solid Wood',
+            spoked: 'Spoked',
+            iron_rim: 'Iron Rimmed',
+            industrial_rev: 'Industrial Revolution',
+            pneumatic: 'Pneumatic',
+            modern: 'Modern'
+        };
+
+        function renderLiveResults(data) {
+            const container = document.getElementById('pollLiveResults');
+            if (!container) return;
+            const counts = {
+                solid_wood: Number(data.solid_wood || 0),
+                spoked: Number(data.spoked || 0),
+                iron_rim: Number(data.iron_rim || 0),
+                industrial_rev: Number(data.industrial_rev || 0),
+                pneumatic: Number(data.pneumatic || 0),
+                modern: Number(data.modern || 0)
+            };
+            const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+            const rows = Object.keys(counts).map(key => {
+                const count = counts[key];
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                const label = FIELD_LABELS[key];
+                return `
+                    <div class="poll-result-row">
+                        <div>${label}</div>
+                        <div class="poll-result-bar"><div class="poll-result-fill" style="width: ${pct}%"></div></div>
+                        <div>${pct}%</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = rows;
+        }
+
+        function initPollListener() {
+            onSnapshot(docRef, (snap) => {
+                if (snap.exists()) {
+                    renderLiveResults(snap.data());
+                } else {
+                    renderLiveResults({});
+                }
+            });
+        }
+
+        window.submitPollToFirestore = async function(newChoice, oldChoice) {
+            if (!newChoice) return;
+            const newField = CHOICE_TO_FIELD[newChoice];
+            const oldField = oldChoice ? CHOICE_TO_FIELD[oldChoice] : null;
+            if (oldField === newField) return; // no change
+
+            await runTransaction(db, async (transaction) => {
+                const snap = await transaction.get(docRef);
+                if (!snap.exists()) {
+                    transaction.set(docRef, {
+                        solid_wood: 0,
+                        spoked: 0,
+                        iron_rim: 0,
+                        industrial_rev: 0,
+                        pneumatic: 0,
+                        modern: 0
+                    });
+                }
+                if (oldField) {
+                    transaction.update(docRef, { [oldField]: increment(-1) });
+                }
+                transaction.update(docRef, { [newField]: increment(1) });
+            });
+        };
+
+        window.addEventListener('DOMContentLoaded', initPollListener);
     </script>
 </body>
 </html>
