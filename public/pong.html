@@ -46,6 +46,36 @@
         .btn:hover { background: #203142; }
         .btn:active { transform: translateY(1px); }
         .note { opacity: 0.8; font-size: 14px; }
+
+        /* Intro overlay */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: rgba(0,0,0,0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease;
+            z-index: 10;
+        }
+        .overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal {
+            background: #10161c;
+            border: 1px solid #1f2a33;
+            border-radius: 12px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.02);
+            padding: 22px 22px 18px;
+            width: min(92vw, 520px);
+            color: #d9e3ee;
+            text-align: center;
+        }
+        .modal h1 { margin: 2px 0 10px; font-size: 22px; font-weight: 700; }
+        .modal p { margin: 4px 0; opacity: 0.9; }
+        .modal .btns { margin-top: 14px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     </style>
     <link rel="icon" href="data:," />
     <meta name="description" content="Classic Pong game in a single HTML file" />
@@ -54,9 +84,24 @@
     <div class="wrap">
         <canvas id="game" width="900" height="600" aria-label="Pong game canvas"></canvas>
         <div class="hud">
-            <button id="start" class="btn">Start / Pause (Space)</button>
-            <button id="reset" class="btn">Reset (R)</button>
-            <span class="note">Controls: W/S or ↑/↓ to move. First to 7 wins.</span>
+            <button id="start" class="btn">Start</button>
+            <button id="pause" class="btn">Pause</button>
+            <button id="reset" class="btn">Reset</button>
+            <button id="mode" class="btn">Mode: 1P</button>
+            <span class="note">P1: W/S &nbsp; P2: ↑/↓ &nbsp; First to 7 wins</span>
+        </div>
+    </div>
+
+    <div id="overlay" class="overlay show" aria-modal="true" role="dialog">
+        <div class="modal">
+            <h1>Pong</h1>
+            <p><strong>Controls</strong></p>
+            <p>P1: W / S &nbsp;&nbsp; P2: ↑ / ↓</p>
+            <p>Press Space to start/pause at any time. First to 7 wins.</p>
+            <div class="btns">
+                <button id="overlay-play" class="btn">Play</button>
+                <button id="overlay-mode" class="btn">Mode: 1P</button>
+            </div>
         </div>
     </div>
 
@@ -104,9 +149,11 @@
             player: { x: 24, y: (logicalHeight - PADDLE_HEIGHT) / 2, score: 0 },
             ai: { x: logicalWidth - 24 - PADDLE_WIDTH, y: (logicalHeight - PADDLE_HEIGHT) / 2, score: 0 },
             ball: { x: logicalWidth/2 - BALL_SIZE/2, y: logicalHeight/2 - BALL_SIZE/2, vx: 0, vy: 0, speed: BALL_SPEED_START },
-            keys: { up: false, down: false },
+            keysP1: { up: false, down: false },
+            keysP2: { up: false, down: false },
             justScored: false,
             winner: null,
+            modeTwoPlayers: false,
         };
 
         function resetBall(servingToLeft) {
@@ -127,11 +174,17 @@
             return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
         }
 
-        function startPause() {
-            if (state.winner) return; // lock after win
-            state.running = !state.running;
-            state.lastTime = performance.now();
-            requestAnimationFrame(loop);
+        function startGame() {
+            if (state.winner) return;
+            if (!state.running) {
+                state.running = true;
+                state.lastTime = performance.now();
+                requestAnimationFrame(loop);
+            }
+        }
+
+        function pauseGame() {
+            state.running = false;
         }
 
         function resetGame() {
@@ -145,23 +198,33 @@
             draw(0);
         }
 
-        function handleInput(dt) {
-            if (state.keys.up && !state.keys.down) {
+        function updatePaddles(dt) {
+            // Player 1 (left paddle) - W/S
+            if (state.keysP1.up && !state.keysP1.down) {
                 state.player.y -= PADDLE_SPEED * dt;
-            } else if (state.keys.down && !state.keys.up) {
+            } else if (state.keysP1.down && !state.keysP1.up) {
                 state.player.y += PADDLE_SPEED * dt;
             }
             state.player.y = clamp(state.player.y, 0, logicalHeight - PADDLE_HEIGHT);
+
+            // Right paddle: player 2 or AI
+            if (state.modeTwoPlayers) {
+                if (state.keysP2.up && !state.keysP2.down) {
+                    state.ai.y -= PADDLE_SPEED * dt;
+                } else if (state.keysP2.down && !state.keysP2.up) {
+                    state.ai.y += PADDLE_SPEED * dt;
+                }
+                state.ai.y = clamp(state.ai.y, 0, logicalHeight - PADDLE_HEIGHT);
+            }
         }
 
         function updateAI(dt) {
-            const target = state.ball.y + BALL_SIZE/2 - PADDLE_HEIGHT/2;
-            const error = target - state.ai.y;
-            state.ai.y += error * AI_REACTION;
-            // Add maximum speed cap relative to ball speed to avoid impossible AI
+            const targetCenter = state.ball.y + BALL_SIZE/2;
+            const paddleCenter = state.ai.y + PADDLE_HEIGHT/2;
+            const diff = targetCenter - paddleCenter;
             const aiMaxSpeed = Math.max(260, state.ball.speed * 0.65);
-            const dy = clamp(state.ai.y - clamp(state.ai.y - error * AI_REACTION, 0, logicalHeight - PADDLE_HEIGHT), -aiMaxSpeed * dt, aiMaxSpeed * dt);
-            state.ai.y = clamp(state.ai.y, 0, logicalHeight - PADDLE_HEIGHT);
+            const move = clamp(diff * AI_REACTION, -aiMaxSpeed * dt, aiMaxSpeed * dt);
+            state.ai.y = clamp(state.ai.y + move, 0, logicalHeight - PADDLE_HEIGHT);
         }
 
         function updateBall(dt) {
@@ -206,7 +269,7 @@
             if (x + BALL_SIZE < 0) {
                 state.ai.score += 1; state.justScored = true;
                 if (state.ai.score >= WIN_SCORE) {
-                    state.winner = "AI";
+                    state.winner = state.modeTwoPlayers ? "Player 2" : "AI";
                     state.running = false;
                 }
                 resetBall(false);
@@ -214,7 +277,7 @@
             } else if (x > logicalWidth) {
                 state.player.score += 1; state.justScored = true;
                 if (state.player.score >= WIN_SCORE) {
-                    state.winner = "Player";
+                    state.winner = state.modeTwoPlayers ? "Player 1" : "Player";
                     state.running = false;
                 }
                 resetBall(true);
@@ -301,8 +364,8 @@
             const dt = Math.min(0.033, (now - state.lastTime) / 1000) || 0; // clamp to avoid huge jumps
             state.lastTime = now;
             if (!state.running) { draw(0); return; }
-            handleInput(dt);
-            updateAI(dt);
+            updatePaddles(dt);
+            if (!state.modeTwoPlayers) updateAI(dt);
             updateBall(dt);
             draw(dt);
             requestAnimationFrame(loop);
@@ -321,23 +384,52 @@
 
         // Input bindings
         const startBtn = document.getElementById("start");
+        const pauseBtn = document.getElementById("pause");
         const resetBtn = document.getElementById("reset");
-        startBtn.addEventListener("click", startPause);
+        const modeBtn = document.getElementById("mode");
+        const overlay = document.getElementById("overlay");
+        const overlayPlayBtn = document.getElementById("overlay-play");
+        const overlayModeBtn = document.getElementById("overlay-mode");
+
+        function updateModeButtons() {
+            const label = state.modeTwoPlayers ? "Mode: 2P" : "Mode: 1P";
+            modeBtn.textContent = label;
+            overlayModeBtn.textContent = label;
+        }
+
+        function toggleMode() {
+            state.modeTwoPlayers = !state.modeTwoPlayers;
+            updateModeButtons();
+        }
+
+        startBtn.addEventListener("click", () => { overlay.classList.remove("show"); startGame(); });
+        pauseBtn.addEventListener("click", () => pauseGame());
         resetBtn.addEventListener("click", resetGame);
+        modeBtn.addEventListener("click", toggleMode);
+        overlayPlayBtn.addEventListener("click", () => { overlay.classList.remove("show"); startGame(); });
+        overlayModeBtn.addEventListener("click", toggleMode);
 
         window.addEventListener("keydown", (e) => {
-            if (e.code === "ArrowUp" || e.code === "KeyW") state.keys.up = true;
-            if (e.code === "ArrowDown" || e.code === "KeyS") state.keys.down = true;
-            if (e.code === "Space") startPause();
+            if (e.code === "KeyW") state.keysP1.up = true;
+            if (e.code === "KeyS") state.keysP1.down = true;
+            if (e.code === "ArrowUp") state.keysP2.up = true;
+            if (e.code === "ArrowDown") state.keysP2.down = true;
+            if (e.code === "Space") {
+                if (overlay.classList.contains("show")) { overlay.classList.remove("show"); startGame(); }
+                else if (state.running) { pauseGame(); } else { startGame(); }
+            }
             if (e.code === "KeyR") resetGame();
         });
         window.addEventListener("keyup", (e) => {
-            if (e.code === "ArrowUp" || e.code === "KeyW") state.keys.up = false;
-            if (e.code === "ArrowDown" || e.code === "KeyS") state.keys.down = false;
+            if (e.code === "KeyW") state.keysP1.up = false;
+            if (e.code === "KeyS") state.keysP1.down = false;
+            if (e.code === "ArrowUp") state.keysP2.up = false;
+            if (e.code === "ArrowDown") state.keysP2.down = false;
         });
 
         // Initialize
         resetGame();
+        updateModeButtons();
         // draw initial frame
         draw(0);
     })();

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wheels Gallery — Types Over the Ages</title>
+    <link rel="icon" href="data:," />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            color: white;
+            text-align: center;
+            padding: 36px 0 12px;
+        }
+
+        header h1 {
+            font-size: 2.4rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.25);
+        }
+
+        .subtitle {
+            opacity: 0.9;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 14px;
+        }
+
+        .nav a {
+            color: #fff;
+            text-decoration: none;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            transition: background 0.2s ease;
+        }
+
+        .nav a:hover { background: rgba(255,255,255,0.25); }
+
+        .main {
+            background: white;
+            border-radius: 18px;
+            padding: 28px;
+            margin: 26px 0 40px;
+            box-shadow: 0 16px 36px rgba(0,0,0,0.12);
+        }
+
+        .intro {
+            margin-bottom: 18px;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-top: 12px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+        }
+
+        .icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .card h3 {
+            color: #4f63d7;
+            margin-bottom: 6px;
+        }
+
+        .meta {
+            display: block;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        footer {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            padding: 18px 10px 26px;
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.9rem; }
+        }
+    </style>
+    <meta name="description" content="Gallery of wheel types and how they evolved, from solid wooden discs to smart and airless tires." />
+    <meta name="theme-color" content="#667eea" />
+    <link rel="prefetch" href="/index.html" as="document">
+    <link rel="prefetch" href="/pong.html" as="document">
+    <link rel="canonical" href="/gallery.html" />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:title" content="Wheels Gallery — Types Over the Ages" />
+    <meta property="og:description" content="Explore how wheel designs evolved across civilizations and technologies." />
+    <meta property="og:type" content="website" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛞 Wheels Gallery</h1>
+            <p class="subtitle">Descriptions of wheel types across history</p>
+        </header>
+
+        <main class="main" id="content">
+            <section class="intro">
+                <p>This gallery highlights influential wheel designs and why they mattered. Dates are approximate and focus on first widespread use.</p>
+            </section>
+
+            <section class="gallery" aria-label="Wheel types">
+                <article class="card" tabindex="0">
+                    <div class="icon">🪵</div>
+                    <h3>Solid Wood Disc</h3>
+                    <small class="meta">c. 3500–3000 BCE • Mesopotamia</small>
+                    <p>Single-piece wooden discs first powered carts and potter’s wheels. Extremely durable but heavy, with high rolling resistance.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🧩</div>
+                    <h3>Compound (Plank) Wheel</h3>
+                    <small class="meta">c. 3000–2000 BCE • Eurasia</small>
+                    <p>Multiple planks doweled together reduced cracking and allowed larger diameters while staying serviceable in the field.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">⚙️</div>
+                    <h3>Spoked Chariot Wheel</h3>
+                    <small class="meta">c. 2000–1500 BCE • Egypt/Steppe</small>
+                    <p>Lightweight spokes shifted the wheel from compression to tension elements, enabling fast chariots and transforming warfare and travel.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🔩</div>
+                    <h3>Iron‑Tired Wooden Wheel</h3>
+                    <small class="meta">c. 1000–500 BCE • Europe/Asia</small>
+                    <p>Red‑hot iron hoops shrunk onto wooden felloes created hard, wear‑resistant tires ideal for heavy loads and rough roads.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🏛️</div>
+                    <h3>Roman Cart Wheel</h3>
+                    <small class="meta">1st c. CE • Roman Empire</small>
+                    <p>Standardized hubs with metal liners and dished profiles improved durability and tracking over long imperial road networks.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🛒</div>
+                    <h3>Medieval Wagon Wheel</h3>
+                    <small class="meta">c. 1200 CE • Europe</small>
+                    <p>Deeply dished wheels with robust hubs and many spokes carried heavy agricultural and trade loads across uneven terrain.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🚂</div>
+                    <h3>Steel Railway Wheel</h3>
+                    <small class="meta">early 1800s • Britain/Europe</small>
+                    <p>Solid steel wheels with conical treads and flanges guided on rails, delivering minimal rolling resistance and huge load capacity.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🚲</div>
+                    <h3>Wire‑Spoked Bicycle Wheel</h3>
+                    <small class="meta">1870s • Global</small>
+                    <p>Tensioned wire spokes and lightweight rims created strong, true wheels, revolutionizing personal mobility and engineering practice.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">💨</div>
+                    <h3>Pneumatic Tire</h3>
+                    <small class="meta">1888 • Dunlop</small>
+                    <p>Air‑filled tires added compliance and traction, improving comfort and speed for bicycles and later automobiles.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🚗</div>
+                    <h3>Pressed‑Steel Auto Wheel</h3>
+                    <small class="meta">early 1900s • Global</small>
+                    <p>Stamped steel discs replaced wooden artillery wheels, enabling mass production, strength, and easy fitment of pneumatic tires.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">📐</div>
+                    <h3>Radial Tire</h3>
+                    <small class="meta">1946 • Michelin</small>
+                    <p>Radially arranged plies lowered rolling resistance, improved tread life, handling, and fuel economy; became the automotive standard.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🧲</div>
+                    <h3>Alloy Wheel (Aluminum)</h3>
+                    <small class="meta">1960s– • Global</small>
+                    <p>Cast or forged aluminum wheels reduced unsprung mass for better ride and performance, with improved corrosion resistance.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🪛</div>
+                    <h3>Beadlock Off‑Road Wheel</h3>
+                    <small class="meta">1970s– • Motorsports</small>
+                    <p>Mechanical rings clamp tire beads to rims, allowing ultra‑low pressures for grip without debeading in harsh terrain.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🧭</div>
+                    <h3>Mecanum/Omni Wheel</h3>
+                    <small class="meta">1970s– • Robotics</small>
+                    <p>Angled rollers around the rim produce omnidirectional motion, enabling holonomic drive for robots and special vehicles.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🧪</div>
+                    <h3>Carbon‑Fiber Wheel</h3>
+                    <small class="meta">2010s– • High‑performance</small>
+                    <p>Composite rims deliver extreme stiffness‑to‑weight and reduced rotational inertia, improving acceleration and handling.</p>
+                </article>
+
+                <article class="card" tabindex="0">
+                    <div class="icon">🛰️</div>
+                    <h3>Smart/Airless Concepts</h3>
+                    <small class="meta">2010s–future • R&D</small>
+                    <p>Embedded sensors enable pressure and temperature monitoring; airless lattice tires aim to eliminate punctures and maintenance.</p>
+                </article>
+            </section>
+        </main>
+
+        <footer>
+            <p>© <span id="year"></span> Wheels Gallery • Dates approximate</p>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>
+
+
