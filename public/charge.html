@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Electric Charge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div id="ui">
+      <div class="panel title">Electric Charge</div>
+      <div class="panel hint">Drag to move. Paint +/− to add charge. Touching conductors share charge ∝ radius.</div>
+      <div class="panel controls">
+        <label>
+          Pause <input id="pause" type="checkbox" />
+        </label>
+        <span style="width:10px;display:inline-block"></span>
+        <label>
+          <input type="radio" name="mode" id="modeDrag" checked /> Drag
+        </label>
+        <label>
+          <input type="radio" name="mode" id="modePaintPos" /> Paint +
+        </label>
+        <label>
+          <input type="radio" name="mode" id="modePaintNeg" /> Paint −
+        </label>
+        <label>
+          <input type="radio" name="mode" id="modeDelete" /> Delete
+        </label>
+        <span style="width:10px;display:inline-block"></span>
+        <button id="btnAddConductor">Add Conductor</button>
+        <button id="btnAddInsulator">Add Insulator</button>
+        <button id="btnClearAll">Clear All</button>
+      </div>
+      <div class="panel hint">Colors: Red = positive, Blue = negative.</div>
+    </div>
+    <div id="steppers">
+      <div id="stepper0" class="stepper">
+        <button id="s0Dec" class="btn neg">−</button>
+        <div id="s0Val" class="val">0</div>
+        <button id="s0Inc" class="btn pos">+</button>
+      </div>
+      <div id="stepper1" class="stepper">
+        <button id="s1Dec" class="btn neg">−</button>
+        <div id="s1Val" class="val">0</div>
+        <button id="s1Inc" class="btn pos">+</button>
+      </div>
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+  </html>
+
+
