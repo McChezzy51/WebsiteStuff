@@ -3,486 +3,55 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Electric Charge Simulator — Conducting Spheres</title>
-    <style>
-      html, body {
-        margin: 0;
-        height: 100%;
-        background: #0b1020;
-        color: #e6edf3;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-        overflow: hidden;
-      }
-      #ui {
-        position: fixed;
-        top: 12px;
-        left: 12px;
-        right: 12px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px 16px;
-        align-items: center;
-        z-index: 10;
-        user-select: none;
-        pointer-events: none;
-      }
-      .panel {
-        background: rgba(10, 14, 28, 0.7);
-        border: 1px solid rgba(120, 140, 180, 0.25);
-        border-radius: 10px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
-        padding: 10px 12px;
-        pointer-events: auto;
-      }
-      .title {
-        font-weight: 600;
-        letter-spacing: 0.2px;
-      }
-      .hint {
-        opacity: 0.85;
-      }
-      .controls label {
-        font-size: 13px;
-        opacity: 0.9;
-        margin-right: 10px;
-      }
-      input[type="range"] {
-        vertical-align: middle;
-      }
-      #canvas {
-        width: 100vw;
-        height: 100vh;
-        display: block;
-        cursor: grab;
-      }
-      #canvas.dragging {
-        cursor: grabbing;
-      }
-      .legend {
-        display: inline-flex;
-        gap: 10px;
-        align-items: center;
-        font-size: 12px;
-        opacity: 0.9;
-      }
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-      }
-      .neg { background: #59a6ff; box-shadow: 0 0 8px #59a6ff88; }
-    </style>
+    <title>Electric Charge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
     <div id="ui">
-      <div class="panel title">Conducting Spheres — Induced Dipoles</div>
-      <div class="panel hint">Drag the spheres. Mobile electrons rearrange via Coulomb forces.</div>
+      <div class="panel title">Electric Charge</div>
+      <div class="panel hint">Drag to move. Paint +/− to add charge. Touching conductors share charge ∝ radius.</div>
       <div class="panel controls">
-        <label>
-          Electrons per sphere
-          <input id="electronCount" type="range" min="12" max="120" value="64" />
-          <span id="electronCountLabel">64</span>
-        </label>
         <label>
           Pause <input id="pause" type="checkbox" />
         </label>
+        <span style="width:10px;display:inline-block"></span>
+        <label>
+          <input type="radio" name="mode" id="modeDrag" checked /> Drag
+        </label>
+        <label>
+          <input type="radio" name="mode" id="modePaintPos" /> Paint +
+        </label>
+        <label>
+          <input type="radio" name="mode" id="modePaintNeg" /> Paint −
+        </label>
+        <label>
+          <input type="radio" name="mode" id="modeDelete" /> Delete
+        </label>
+        <span style="width:10px;display:inline-block"></span>
+        <button id="btnAddConductor">Add Conductor</button>
+        <button id="btnAddInsulator">Add Insulator</button>
+        <button id="btnClearAll">Clear All</button>
       </div>
-      <div class="panel legend">
-        <span class="dot neg"></span> Electrons
+      <div class="panel hint">Colors: Red = positive, Blue = negative.</div>
+    </div>
+    <div id="steppers">
+      <div id="stepper0" class="stepper">
+        <button id="s0Dec" class="btn neg">−</button>
+        <div id="s0Val" class="val">0</div>
+        <button id="s0Inc" class="btn pos">+</button>
+      </div>
+      <div id="stepper1" class="stepper">
+        <button id="s1Dec" class="btn neg">−</button>
+        <div id="s1Val" class="val">0</div>
+        <button id="s1Inc" class="btn pos">+</button>
       </div>
     </div>
     <canvas id="canvas"></canvas>
 
-    <script>
-      'use strict';
-
-      // Canvas setup with HiDPI support
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
-      function resizeCanvas() {
-        const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        const width = Math.floor(window.innerWidth);
-        const height = Math.floor(window.innerHeight);
-        canvas.style.width = width + 'px';
-        canvas.style.height = height + 'px';
-        canvas.width = Math.floor(width * ratio);
-        canvas.height = Math.floor(height * ratio);
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      }
-      resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
-
-      // UI controls
-      const electronRange = document.getElementById('electronCount');
-      const electronLabel = document.getElementById('electronCountLabel');
-      const pauseCheckbox = document.getElementById('pause');
-      electronLabel.textContent = electronRange.value;
-
-      // Basic vector helpers
-      function vec(x, y) { return { x, y }; }
-      function add(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
-      function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
-      function mul(a, s) { return { x: a.x * s, y: a.y * s }; }
-      function dot(a, b) { return a.x * b.x + a.y * b.y; }
-      function len2(a) { return a.x * a.x + a.y * a.y; }
-      function len(a) { return Math.hypot(a.x, a.y); }
-      function norm(a) { const l = len(a) || 1; return { x: a.x / l, y: a.y / l }; }
-      function fromAngle(theta) { return { x: Math.cos(theta), y: Math.sin(theta) }; }
-
-      // Color helpers
-      function mixColorRGB(a, b, t) {
-        const r = Math.round(a[0] + (b[0] - a[0]) * t);
-        const g = Math.round(a[1] + (b[1] - a[1]) * t);
-        const bch = Math.round(a[2] + (b[2] - a[2]) * t);
-        return `rgb(${r},${g},${bch})`;
-      }
-
-      // Units and physical constants
-      const METERS_PER_PIXEL = 1e-9; // meters per canvas pixel (unit mapping)
-      const COULOMB_K = 8.9875517923e9; // N·m^2·C^-2 (Coulomb's constant)
-      const ELEMENTARY_CHARGE = -1.602176634e-19; // C (electron)
-      const MIN_R2_M2 = 1e-28; // minimum r^2 in m^2 to avoid singularities
-
-      // Simulation parameters (time scaling)
-      const MOBILITY = 3e11;     // rad / (N·s), converts tangential force to angular velocity
-      const MAX_DTH = 1.00;      // clamp per-step angular change (rad)
-      const ANGLE_JITTER = 0.0;  // initial angle jitter to break symmetry
-      const COLOR_GAMMA = 0.6;   // gamma for saturation mapping (contrast)
-
-      // Sphere (2D disk) with mobile surface electrons (angles)
-      class Sphere {
-        constructor(cx, cy, radius, numElectrons, chargeOffsetElectrons = 0) {
-          this.center = vec(cx, cy);
-          this.radius = radius;
-          this.phase = Math.random() * Math.PI * 2;
-          this.chargeOffsetElectrons = (chargeOffsetElectrons | 0);
-          this.setElectronCount(numElectrons);
-          this.dragOffset = vec(0, 0);
-        }
-        setElectronCount(n) {
-          const prev = this.angles || [];
-          this.angles = new Array(n);
-          for (let i = 0; i < n; i++) {
-            // Preserve previous angles when possible for smooth transitions
-            this.angles[i] = (i < prev.length
-              ? prev[i]
-              : (i / n) * Math.PI * 2 + this.phase + (Math.random() - 0.5) * ANGLE_JITTER);
-          }
-          // Net charge via positive lattice magnitude relative to mobile electrons
-          // Q_net = -e * chargeOffsetElectrons
-          this.positiveChargeC = -ELEMENTARY_CHARGE * (n + (this.chargeOffsetElectrons | 0));
-        }
-        electronPos(i) {
-          const d = fromAngle(this.angles[i]);
-          return add(this.center, mul(d, this.radius));
-        }
-        draw(ctx) {
-          const { x, y } = this.center;
-          // Body
-          const grad = ctx.createRadialGradient(x - this.radius * 0.35, y - this.radius * 0.35, this.radius * 0.2, x, y, this.radius);
-          grad.addColorStop(0, '#1d2544');
-          grad.addColorStop(1, '#0c132a');
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(x, y, this.radius, 0, Math.PI * 2);
-          ctx.fill();
-          // Rim
-          ctx.strokeStyle = 'rgba(180,200,240,0.25)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // Absolute net surface charge density visualization (white/red/blue)
-          // Adaptive, drastically reduced angular bins to reduce noise
-          const M = Math.max(8, Math.min(32, Math.floor(this.angles.length / 4) || 8));
-          const twoPi = Math.PI * 2;
-          const bins = new Array(M).fill(0);
-
-          // Accumulate electrons with fractional weights across adjacent bins (linear)
-          for (let i = 0; i < this.angles.length; i++) {
-            let th = this.angles[i];
-            if (th < -Math.PI) th += twoPi; else if (th > Math.PI) th -= twoPi;
-            const u = (th + Math.PI) / twoPi; // 0..1
-            const pos = u * M;
-            let j0 = Math.floor(pos);
-            const frac = pos - j0; // [0,1)
-            j0 = ((j0 % M) + M) % M; // wrap
-            const j1 = (j0 + 1) % M;
-            bins[j0] += 1 - frac;
-            bins[j1] += frac;
-          }
-
-          // Light smoothing with small circular box blur
-          const radius = 1;
-          for (let pass = 0; pass < 1; pass++) {
-            const tmp = new Array(M).fill(0);
-            for (let j = 0; j < M; j++) {
-              let sum = 0, w = 0;
-              for (let k = -radius; k <= radius; k++) {
-                const idx = (j + k + M) % M;
-                sum += bins[idx];
-                w++;
-              }
-              tmp[j] = sum / w;
-            }
-            for (let j = 0; j < M; j++) bins[j] = tmp[j];
-          }
-
-          // Convert to charge per bin (C); include uniform positive lattice per bin
-          const posPerBinC = this.positiveChargeC / M;
-          const sigma = new Array(M);
-          let maxAbs = 0;
-          let minAbs = Infinity;
-          for (let j = 0; j < M; j++) {
-            const qNeg = bins[j] * ELEMENTARY_CHARGE; // negative
-            const s = posPerBinC + qNeg; // net per bin
-            sigma[j] = s;
-            const a = Math.abs(s);
-            if (a > maxAbs) maxAbs = a;
-            if (a < minAbs) minAbs = a;
-          }
-          if (maxAbs <= 0) maxAbs = 1; // avoid divide-by-zero
-          if (!isFinite(minAbs)) minAbs = 0;
-          const rangeAbs = Math.max(1e-30, maxAbs - minAbs);
-
-          // Colors
-          const white = [255, 255, 255];
-          const red = [255, 106, 106];
-          const blue = [89, 166, 255];
-
-          function colorForSigma(s) {
-            const base = s >= 0 ? red : blue;
-            const a = Math.abs(s);
-            let t = (a - minAbs) / rangeAbs; // contrast within sphere
-            if (t < 0) t = 0; else if (t > 1) t = 1;
-            t = Math.pow(t, COLOR_GAMMA);
-            return mixColorRGB(white, base, t);
-          }
-
-          // Fill a thin surface ring with a smooth angular gradient (no bin boundaries)
-          const ringThickness = Math.max(4, this.radius * 0.18);
-          const rInner = Math.max(1, this.radius - ringThickness);
-          if (typeof ctx.createConicGradient === 'function') {
-            const cg = ctx.createConicGradient(-Math.PI, x, y);
-            for (let j = 0; j <= M; j++) {
-              const col = colorForSigma(sigma[j % M]);
-              cg.addColorStop(j / M, col);
-            }
-            ctx.beginPath();
-            ctx.arc(x, y, this.radius, 0, Math.PI * 2);
-            ctx.arc(x, y, rInner, Math.PI * 2, 0, true);
-            ctx.closePath();
-            ctx.fillStyle = cg;
-            ctx.fill();
-          } else {
-            // Fallback: many fine ring slices with interpolated colors
-            const slices = Math.max(180, M * 16);
-            for (let k = 0; k < slices; k++) {
-              const a0 = -Math.PI + (twoPi * k) / slices;
-              const a1 = -Math.PI + (twoPi * (k + 1)) / slices;
-              const am = (a0 + a1) * 0.5;
-              const u = (am + Math.PI) / twoPi;
-              const pos = u * M;
-              let j0 = Math.floor(pos);
-              const frac = pos - j0;
-              j0 = ((j0 % M) + M) % M;
-              const j1 = (j0 + 1) % M;
-              const sVal = sigma[j0] * (1 - frac) + sigma[j1] * frac;
-              const color = colorForSigma(sVal);
-              ctx.beginPath();
-              ctx.arc(x, y, this.radius, a0, a1);
-              ctx.arc(x, y, rInner, a1, a0, true);
-              ctx.closePath();
-              ctx.fillStyle = color;
-              ctx.fill();
-            }
-          }
-
-          // No center fill: show charge only on the surface ring
-
-          // Draw rim again to stay crisp over wedges
-          ctx.strokeStyle = 'rgba(200,220,255,0.40)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(x, y, this.radius, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-
-      // World setup
-      let spheres = [];
-      function initWorld() {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const R = Math.max(28, Math.min(w, h) * 0.11);
-        const n = parseInt(electronRange.value, 10) | 0;
-        const offset = Math.max(1, Math.round(n * 0.25));
-        // Left sphere net positive, right sphere net negative
-        spheres = [
-          new Sphere(w * 0.35, h * 0.5, R, n, +offset),
-          new Sphere(w * 0.65, h * 0.5, R, n, -offset)
-        ];
-      }
-      initWorld();
-
-      // Reinitialize electrons count on change (preserves per-sphere charge offsets)
-      electronRange.addEventListener('input', () => {
-        const n = parseInt(electronRange.value, 10) | 0;
-        electronLabel.textContent = String(n);
-        for (const s of spheres) s.setElectronCount(n);
-      });
-
-      // Pointer interactions (drag spheres)
-      let dragging = null; // { sphere, id }
-      function getEventPos(e) {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left);
-        const y = (e.clientY - rect.top);
-        return vec(x, y);
-      }
-      function pickSphere(p) {
-        for (let i = spheres.length - 1; i >= 0; i--) {
-          const s = spheres[i];
-          if (len(sub(p, s.center)) <= s.radius) return s;
-        }
-        return null;
-      }
-      canvas.addEventListener('pointerdown', (e) => {
-        const p = getEventPos(e);
-        const s = pickSphere(p);
-        if (s) {
-          dragging = { sphere: s, id: e.pointerId };
-          s.dragOffset = sub(s.center, p);
-          canvas.setPointerCapture(e.pointerId);
-          canvas.classList.add('dragging');
-        }
-      });
-      canvas.addEventListener('pointermove', (e) => {
-        if (!dragging || dragging.id !== e.pointerId) return;
-        const p = getEventPos(e);
-        dragging.sphere.center = add(p, dragging.sphere.dragOffset);
-      });
-      function endDrag(e) {
-        if (dragging && (!e || dragging.id === e.pointerId)) {
-          canvas.releasePointerCapture(dragging.id);
-          dragging = null;
-          canvas.classList.remove('dragging');
-        }
-      }
-      canvas.addEventListener('pointerup', endDrag);
-      canvas.addEventListener('pointercancel', endDrag);
-
-      // Physics: compute tangential electric field and move electrons (overdamped)
-      function step(dt) {
-        const allElectrons = [];
-        for (const s of spheres) {
-          for (let i = 0; i < s.angles.length; i++) {
-            allElectrons.push({ sphere: s, i, pos: s.electronPos(i) });
-          }
-        }
-        // For each electron, compute E from positive centers and all electrons (both spheres)
-        for (const s of spheres) {
-          const n = s.angles.length;
-          for (let i = 0; i < n; i++) {
-            const theta = s.angles[i];
-            const p = s.electronPos(i);
-            let Ex = 0, Ey = 0;
-
-            // Field from positive lattice charges at sphere centers
-            for (const t of spheres) {
-              const rpx = sub(p, t.center); // pixels
-              const rx = rpx.x * METERS_PER_PIXEL; // meters
-              const ry = rpx.y * METERS_PER_PIXEL;
-              const r2m = Math.max(MIN_R2_M2, rx * rx + ry * ry);
-              const invr = 1 / Math.sqrt(r2m);
-              const invr3 = invr / r2m;
-              const scale = COULOMB_K * t.positiveChargeC * invr3;
-              Ex += scale * rx; Ey += scale * ry;
-            }
-
-            // Field from all electrons (excluding self)
-            for (const e of allElectrons) {
-              if (e.sphere === s && e.i === i) continue;
-              const rpx = sub(p, e.pos); // in pixels
-              const rx = rpx.x * METERS_PER_PIXEL; // convert to meters
-              const ry = rpx.y * METERS_PER_PIXEL;
-              const r2m = Math.max(MIN_R2_M2, rx * rx + ry * ry);
-              const invr = 1 / Math.sqrt(r2m);
-              const invr3 = invr / r2m; // 1 / r^3 (meters)
-              const scale = COULOMB_K * ELEMENTARY_CHARGE * invr3;
-              Ex += scale * rx; Ey += scale * ry; // E in N/C
-            }
-
-            // Tangential component at the surface point
-            const tx = -Math.sin(theta), ty = Math.cos(theta);
-            const Et = Ex * tx + Ey * ty;
-
-            // Overdamped drift: dθ ∝ q E_t (electron charge)
-            let dtheta = MOBILITY * (ELEMENTARY_CHARGE * Et) * dt;
-            if (dtheta > MAX_DTH) dtheta = MAX_DTH; else if (dtheta < -MAX_DTH) dtheta = -MAX_DTH;
-            let th = theta + dtheta;
-            if (th > Math.PI) th -= Math.PI * 2; else if (th < -Math.PI) th += Math.PI * 2;
-            s.angles[i] = th;
-          }
-        }
-      }
-
-      // Rendering
-      function draw() {
-        const w = canvas.clientWidth, h = canvas.clientHeight;
-        ctx.clearRect(0, 0, w, h);
-
-        // Background vignette
-        const g = ctx.createRadialGradient(w * 0.5, h * 0.6, Math.min(w, h) * 0.2, w * 0.5, h * 0.6, Math.max(w, h) * 0.8);
-        g.addColorStop(0, '#0b1020');
-        g.addColorStop(1, '#070b18');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-
-        // Optional: faint line connecting centers for context
-        ctx.strokeStyle = 'rgba(160,180,220,0.10)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(spheres[0].center.x, spheres[0].center.y);
-        ctx.lineTo(spheres[1].center.x, spheres[1].center.y);
-        ctx.stroke();
-
-        for (const s of spheres) s.draw(ctx);
-
-        // Instruction overlay
-        ctx.fillStyle = 'rgba(230,237,243,0.75)';
-        ctx.font = '13px system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial';
-        ctx.fillText('Drag spheres: left is net positive, right net negative.', 16, h - 16);
-      }
-
-      // Animation loop
-      let last = performance.now();
-      function frame(now) {
-        const dtMs = Math.min(32, now - last);
-        last = now;
-        if (!pauseCheckbox.checked) step(dtMs / 1000);
-        draw();
-        requestAnimationFrame(frame);
-      }
-      requestAnimationFrame(frame);
-
-      // Re-center spheres on resize to keep them visible
-      window.addEventListener('resize', () => {
-        const w = canvas.clientWidth, h = canvas.clientHeight;
-        const R = Math.max(28, Math.min(w, h) * 0.11);
-        for (const s of spheres) s.radius = R;
-        // Clamp inside viewport
-        for (const s of spheres) {
-          s.center.x = Math.max(R + 8, Math.min(w - R - 8, s.center.x));
-          s.center.y = Math.max(R + 8, Math.min(h - R - 8, s.center.y));
-        }
-      });
-
-      // Prevent context menu during dragging
-      window.addEventListener('contextmenu', (e) => {
-        if (dragging) e.preventDefault();
-      });
-    </script>
+    <script type="module" src="js/app.js"></script>
   </body>
   </html>
 
